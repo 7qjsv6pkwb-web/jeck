@@ -12,6 +12,11 @@ class ActionCreate(BaseModel):
     idempotency_key: str
 
 
+class ActionApproveRequest(BaseModel):
+    approved_by: str
+    channel: Literal["web", "telegram"] = "web"
+
+
 class ActionResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
