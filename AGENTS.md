@@ -17,6 +17,11 @@ Build backend foundation: FastAPI + Postgres + SQLAlchemy 2.0 + Alembic + Pytest
 - backend/app/services for business logic (actions/audit)
 - backend/app/tests for pytest
 
+## Docs policy (AGENTS vs README)
+- **AGENTS.md** — single source of truth for project rules: guardrails, conventions, agent/Codex behavior, PR/commit requirements, testing/migrations policies.
+- **README.md** — only “how to run/use”: quick start, dependencies, env vars, commands, links.
+- If a note changes how we *work* (process/rules) → **AGENTS.md**. If it changes how we *run* (usage) → **README.md**.
+
 ## Setup & commands (Poetry)
 - Install deps: `cd backend && poetry install`
 - Run tests: `cd backend && poetry run pytest -q`
