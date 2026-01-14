@@ -13,6 +13,7 @@ uvicorn = { version = "^0.30.0", extras = ["standard"] }
 sqlalchemy = "^2.0.35"
 alembic = "^1.13.2"
 psycopg = { version = "^3.2.1", extras = ["binary"] }
+python-dotenv = "^1.2.1"
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^8.3.2"
