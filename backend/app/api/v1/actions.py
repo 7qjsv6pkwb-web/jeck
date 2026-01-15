@@ -80,3 +80,24 @@ def approve_action(
     db.commit()
     db.refresh(action)
     return ActionResponse.model_validate(action)
+
+@router.post("/actions/{action_id}/execute", response_model=ActionResponse)
+def execute_action(action_id: UUID, db: Session = Depends(get_db_session)) -> ActionResponse:
+    action = db.get(Action, action_id)
+    if not action:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Action not found")
+    action = actions_service.execute_action(db, action=action)
+    db.commit()
+    db.refresh(action)
+    return ActionResponse.model_validate(action)
+
+
+@router.post("/actions/{action_id}/cancel", response_model=ActionResponse)
+def cancel_action(action_id: UUID, db: Session = Depends(get_db_session)) -> ActionResponse:
+    action = db.get(Action, action_id)
+    if not action:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Action not found")
+    action = actions_service.cancel_action(db, action=action)
+    db.commit()
+    db.refresh(action)
+    return ActionResponse.model_validate(action)
