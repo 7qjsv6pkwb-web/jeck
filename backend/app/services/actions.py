@@ -48,11 +48,22 @@ def create_action(
 
 
 def approve_action(db: Session, *, action: Action, approved_by: str) -> Action:
+    # Idempotent approve: same approver can repeat approve safely
+    if action.status == "APPROVED":
+        if action.approved_by == approved_by:
+            return action
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Action already approved by another user.",
+        )
+
     _transition_action(db, action, "APPROVED", actor=approved_by)
     action.approved_by = approved_by
     return action
 
-
+    _transition_action(db, action, "APPROVED", actor=approved_by)
+    action.approved_by = approved_by
+    return action
 def cancel_action(db: Session, *, action: Action, actor: str = "system") -> Action:
     _transition_action(db, action, "CANCELED", actor=actor)
     return action
