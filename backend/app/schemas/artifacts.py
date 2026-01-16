@@ -10,9 +10,9 @@ class ArtifactCreate(BaseModel):
     thread_id: Optional[UUID] = None
     action_id: Optional[UUID] = None
     type: str
-    storage_path: str
     filename: str
     metadata: dict = Field(default_factory=dict)
+    content_base64: str
 
 
 class ArtifactResponse(BaseModel):
