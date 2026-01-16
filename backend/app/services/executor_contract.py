@@ -2,8 +2,6 @@ from __future__ import annotations
 
 from typing import Any, Protocol, TypedDict
 
-from sqlalchemy.orm import Session
-
 from app.db.models import Action
 
 
@@ -16,5 +14,6 @@ class ExecutorResult(TypedDict, total=False):
 
 
 class Executor(Protocol):
-    def execute(self, db: Session, action: Action) -> ExecutorResult:
+    def execute(self, action: Action) -> ExecutorResult:
         ...
+
