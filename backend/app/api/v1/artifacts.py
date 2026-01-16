@@ -1,39 +1,24 @@
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy import select
+from fastapi.responses import FileResponse
 from sqlalchemy.orm import Session
 
-from app.db.models import Artifact, Project, Thread, Action
 from app.db.session import get_db_session
 from app.schemas.artifacts import ArtifactCreate, ArtifactResponse
+from app.services import artifacts as artifact_service
 
 router = APIRouter(prefix="/artifacts", tags=["artifacts"])
 
 
 @router.post("", response_model=ArtifactResponse, status_code=status.HTTP_201_CREATED)
 def create_artifact(payload: ArtifactCreate, db: Session = Depends(get_db_session)) -> ArtifactResponse:
-    # Validate references exist (basic integrity + nicer errors than FK explosions)
-    if not db.get(Project, payload.project_id):
-        raise HTTPException(status_code=404, detail="Project not found")
-    if payload.thread_id and not db.get(Thread, payload.thread_id):
-        raise HTTPException(status_code=404, detail="Thread not found")
-    if payload.action_id and not db.get(Action, payload.action_id):
-        raise HTTPException(status_code=404, detail="Action not found")
-
-    artifact = Artifact(
-        project_id=payload.project_id,
-        thread_id=payload.thread_id,
-        action_id=payload.action_id,
-        type=payload.type,
-        storage_path=payload.storage_path,
-        filename=payload.filename,
-        metadata_=payload.metadata,
-        version=1,
-    )
-    db.add(artifact)
-    db.commit()
-    db.refresh(artifact)
+    try:
+        artifact = artifact_service.create_artifact(db, payload)
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
 
     return ArtifactResponse.model_validate(
         {
@@ -59,15 +44,9 @@ def list_artifacts(
     limit: int = 100,
     db: Session = Depends(get_db_session),
 ) -> list[ArtifactResponse]:
-    q = select(Artifact).order_by(Artifact.created_at.desc()).limit(limit)
-    if project_id:
-        q = q.where(Artifact.project_id == project_id)
-    if thread_id:
-        q = q.where(Artifact.thread_id == thread_id)
-    if action_id:
-        q = q.where(Artifact.action_id == action_id)
-
-    rows = db.execute(q).scalars().all()
+    rows = artifact_service.list_artifacts(
+        db, project_id=project_id, thread_id=thread_id, action_id=action_id, limit=limit
+    )
 
     out: list[ArtifactResponse] = []
     for a in rows:
@@ -92,7 +71,7 @@ def list_artifacts(
 
 @router.get("/{artifact_id}", response_model=ArtifactResponse)
 def get_artifact(artifact_id: UUID, db: Session = Depends(get_db_session)) -> ArtifactResponse:
-    a = db.get(Artifact, artifact_id)
+    a = artifact_service.get_artifact(db, artifact_id)
     if not a:
         raise HTTPException(status_code=404, detail="Artifact not found")
 
@@ -110,3 +89,16 @@ def get_artifact(artifact_id: UUID, db: Session = Depends(get_db_session)) -> Ar
             "created_at": a.created_at,
         }
     )
+
+
+@router.get("/{artifact_id}/download")
+def download_artifact(artifact_id: UUID, db: Session = Depends(get_db_session)) -> FileResponse:
+    artifact = artifact_service.get_artifact(db, artifact_id)
+    if not artifact:
+        raise HTTPException(status_code=404, detail="Artifact not found")
+
+    file_path = artifact_service.get_artifact_file_path(artifact)
+    if not file_path.exists():
+        raise HTTPException(status_code=404, detail="Artifact file not found")
+
+    return FileResponse(path=file_path, filename=artifact.filename)
