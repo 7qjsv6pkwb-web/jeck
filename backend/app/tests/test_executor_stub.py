@@ -70,4 +70,9 @@ def test_execute_sets_result_and_done(monkeypatch):
     event_types = {row["event_type"] for row in audit.json()}
     assert "action.execute_attempt" in event_types
 
+    audit = client.get(f"/v1/audit?action_id={action['id']}&limit=50")
+    audit.raise_for_status()
+    event_types = {row["event_type"] for row in audit.json()}
+    assert "action.execute_attempt" in event_types
+
     app.dependency_overrides.clear()
