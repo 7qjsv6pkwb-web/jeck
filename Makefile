@@ -27,23 +27,7 @@ test-int:
 		echo "Poetry is required. Install it and re-run: https://python-poetry.org/docs/#installation" >&2; \
 		exit 1; \
 	fi
-	@cd backend && poetry run python - <<'PY'
-import os
-
-from sqlalchemy import create_engine, text
-from sqlalchemy.exc import SQLAlchemyError
-
-url = os.getenv("DATABASE_URL")
-if not url:
-    raise SystemExit("DATABASE_URL is not set")
-
-engine = create_engine(url)
-try:
-    with engine.connect() as conn:
-        conn.execute(text("SELECT 1"))
-except SQLAlchemyError as exc:
-    raise SystemExit(f"Database connection failed: {exc}") from exc
-PY
+	@cd backend && poetry run python -c 'exec("import os\nfrom sqlalchemy import create_engine, text\nfrom sqlalchemy.exc import SQLAlchemyError\n\nurl = os.getenv(\"DATABASE_URL\")\nif not url:\n    raise SystemExit(\"DATABASE_URL is not set\")\n\nengine = create_engine(url)\ntry:\n    with engine.connect() as conn:\n        conn.execute(text(\"SELECT 1\"))\nexcept SQLAlchemyError as exc:\n    raise SystemExit(f\"Database connection failed: {exc}\")\n")'
 	cd backend && poetry run alembic upgrade head
 	cd backend && poetry run pytest -q -m integration
 
