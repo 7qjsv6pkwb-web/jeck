@@ -84,8 +84,8 @@ A PR is “Done” only if:
 ### Required local checks (Codex must run and paste output in PR summary)
 From repo root:
 - `cd backend && poetry install` (only if deps changed)
-- `cd backend && poetry run pytest -q`
-- `cd backend && poetry run pytest -q -m integration` (if env+DB are available)
+- `make check`
+- `make test-int` (with `DATABASE_URL` set and DB available)
 - If API routes changed: show 2 curls (example):
   - `curl -i http://localhost:8000/health`
   - `curl -i http://localhost:8000/v1/<resource>?limit=5`
@@ -112,7 +112,7 @@ Each PR description must contain:
 
 ## Standard dev commands (source of truth)
 From repo root:
-- Preferred local checks: `make test` and `make test-int` (with `DATABASE_URL` set).
+- Preferred local checks: `make check` and `make test-int` (with `DATABASE_URL` set).
 - Start DB: `docker compose up -d db`
 - Backend (tests): `cd backend && poetry run pytest -q`
 - Backend (integration): `cd backend && poetry run pytest -q -m integration`

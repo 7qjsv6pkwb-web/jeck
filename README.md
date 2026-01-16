@@ -21,6 +21,9 @@ MVP goal: FastAPI + PostgreSQL + SQLAlchemy 2.0 + Alembic + Pytest.
 make db-up
 cd backend && poetry install
 make test
+make lint
+make typecheck
+make check
 ```
 For integration tests, set `DATABASE_URL` then run `make test-int`.
 
@@ -47,4 +50,3 @@ poetry run uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 - A5 Artifact storage
 - A6 Executor contract + stub
 - A7 Tests
-
