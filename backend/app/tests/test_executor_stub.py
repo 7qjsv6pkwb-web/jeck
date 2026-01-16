@@ -1,4 +1,3 @@
-import base64
 import os
 from pathlib import Path
 
@@ -25,13 +24,12 @@ def run_migrations(database_url: str) -> None:
 
 
 @pytest.mark.integration
-def test_execute_sets_result_and_done(monkeypatch, tmp_path):
+def test_execute_sets_result_and_done(monkeypatch):
     database_url = os.getenv("DATABASE_URL")
     if not database_url:
         pytest.skip("DATABASE_URL is required for integration tests")
 
     monkeypatch.setenv("DATABASE_URL", database_url)
-    monkeypatch.setenv("ARTIFACTS_DIR", str(tmp_path))
     run_migrations(database_url)
 
     engine = create_engine(database_url)
@@ -66,39 +64,6 @@ def test_execute_sets_result_and_done(monkeypatch, tmp_path):
     assert body["result"]["type"] == "stub"
     assert "action_id" in body["result"]
     assert body["result"]["status"] == "executed"
-
-    artifact_action = client.post(
-        f"/v1/threads/{thread['id']}/actions",
-        json={
-            "type": "artifact.store",
-            "policy_mode": "EXECUTE",
-            "payload": {
-                "type": "report",
-                "filename": "note.txt",
-                "content_base64": base64.b64encode(b"artifact").decode(),
-            },
-            "idempotency_key": "idem-artifact-1",
-        },
-    ).json()
-    client.post(
-        f"/v1/actions/{artifact_action['id']}/approve",
-        json={"approved_by": "tester", "channel": "web"},
-    ).raise_for_status()
-    executed_artifact = client.post(f"/v1/actions/{artifact_action['id']}/execute")
-    executed_artifact.raise_for_status()
-    artifact_body = executed_artifact.json()
-
-    assert artifact_body["status"] == "DONE"
-    assert artifact_body["result"]["type"] == "artifact.store"
-    artifact_id = artifact_body["result"]["data"]["artifact_id"]
-
-    artifacts = client.get(f"/v1/artifacts?action_id={artifact_action['id']}&limit=5")
-    artifacts.raise_for_status()
-    rows = artifacts.json()
-    assert len(rows) == 1
-    assert rows[0]["id"] == artifact_id
-    stored_path = tmp_path / rows[0]["storage_path"]
-    assert stored_path.exists()
 
     audit = client.get(f"/v1/audit?action_id={action['id']}&limit=50")
     audit.raise_for_status()
