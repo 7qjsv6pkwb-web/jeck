@@ -1,6 +1,9 @@
 from typing import Any
+from uuid import UUID
 
 from fastapi import HTTPException, status
+from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.db.models import Action, Thread
@@ -24,7 +27,17 @@ def create_action(
     payload: dict[str, Any],
     idempotency_key: str,
     actor: str = "system",
-) -> Action:
+) -> tuple[Action, bool]:
+    existing = _get_action_by_idempotency_key(db, idempotency_key)
+    if existing:
+        return _validate_idempotent_request(
+            existing,
+            thread_id=thread.id,
+            action_type=action_type,
+            policy_mode=policy_mode,
+            payload=payload,
+        ), False
+
     action = Action(
         thread_id=thread.id,
         type=action_type,
@@ -34,7 +47,21 @@ def create_action(
         idempotency_key=idempotency_key,
     )
     db.add(action)
-    db.flush()
+    try:
+        db.flush()
+    except IntegrityError:
+        db.rollback()
+        existing = _get_action_by_idempotency_key(db, idempotency_key)
+        if existing:
+            return _validate_idempotent_request(
+                existing,
+                thread_id=thread.id,
+                action_type=action_type,
+                policy_mode=policy_mode,
+                payload=payload,
+            ), False
+        raise
+
     audit_service.log_audit_event(
         db,
         actor=actor,
@@ -44,7 +71,7 @@ def create_action(
         thread_id=thread.id,
         action_id=action.id,
     )
-    return action
+    return action, True
 
 
 def approve_action(db: Session, *, action: Action, approved_by: str) -> Action:
@@ -60,6 +87,36 @@ def approve_action(db: Session, *, action: Action, approved_by: str) -> Action:
     _transition_action(db, action, "APPROVED", actor=approved_by)
     action.approved_by = approved_by
     return action
+
+
+def _get_action_by_idempotency_key(db: Session, idempotency_key: str) -> Action | None:
+    return (
+        db.execute(select(Action).where(Action.idempotency_key == idempotency_key))
+        .scalars()
+        .first()
+    )
+
+
+def _validate_idempotent_request(
+    action: Action,
+    *,
+    thread_id: UUID,
+    action_type: str,
+    policy_mode: str,
+    payload: dict[str, Any],
+) -> Action:
+    if (
+        action.thread_id != thread_id
+        or action.type != action_type
+        or action.policy_mode != policy_mode
+        or action.payload != payload
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Idempotency key already used with different payload",
+        )
+    return action
+
 
 def cancel_action(db: Session, *, action: Action, actor: str = "system") -> Action:
     _transition_action(db, action, "CANCELED", actor=actor)

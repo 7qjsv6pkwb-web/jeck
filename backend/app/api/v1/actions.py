@@ -1,6 +1,6 @@
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Response, status
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
@@ -18,12 +18,15 @@ router = APIRouter(tags=["actions"])
     status_code=status.HTTP_201_CREATED,
 )
 def create_action(
-    thread_id: UUID, payload: ActionCreate, db: Session = Depends(get_db_session)
+    thread_id: UUID,
+    payload: ActionCreate,
+    response: Response,
+    db: Session = Depends(get_db_session),
 ) -> ActionResponse:
     thread = db.get(Thread, thread_id)
     if not thread:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Thread not found")
-    action = actions_service.create_action(
+    action, created = actions_service.create_action(
         db,
         thread=thread,
         action_type=payload.type,
@@ -31,6 +34,7 @@ def create_action(
         payload=payload.payload,
         idempotency_key=payload.idempotency_key,
     )
+    response.status_code = status.HTTP_201_CREATED if created else status.HTTP_200_OK
     db.commit()
     db.refresh(action)
     return ActionResponse.model_validate(action)

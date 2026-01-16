@@ -1,0 +1,99 @@
+import os
+from pathlib import Path
+
+import pytest
+from alembic import command
+from alembic.config import Config
+from fastapi.testclient import TestClient
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker
+
+from app.db.session import get_db_session
+from app.main import app
+
+
+BASE_DIR = Path(__file__).resolve().parents[2]
+
+
+def run_migrations(database_url: str) -> None:
+    config = Config(str(BASE_DIR / "alembic.ini"))
+    config.set_main_option("script_location", str(BASE_DIR / "alembic"))
+    config.set_main_option("sqlalchemy.url", database_url)
+    command.downgrade(config, "base")
+    command.upgrade(config, "head")
+
+
+@pytest.fixture()
+def client(monkeypatch):
+    database_url = os.getenv("DATABASE_URL")
+    if not database_url:
+        pytest.skip("DATABASE_URL is required for integration tests")
+
+    monkeypatch.setenv("DATABASE_URL", database_url)
+    run_migrations(database_url)
+
+    engine = create_engine(database_url)
+    SessionLocal = sessionmaker(bind=engine, autoflush=False, autocommit=False)
+
+    def override_db_session():
+        db = SessionLocal()
+        try:
+            yield db
+        finally:
+            db.close()
+
+    app.dependency_overrides[get_db_session] = override_db_session
+    try:
+        yield TestClient(app)
+    finally:
+        app.dependency_overrides.clear()
+
+
+def _create_project_and_thread(client: TestClient) -> dict:
+    project_payload = {"slug": "demo", "name": "Demo", "settings": {"tier": "dev"}}
+    project_resp = client.post("/v1/projects", json=project_payload)
+    project_resp.raise_for_status()
+    project = project_resp.json()
+
+    thread_payload = {"title": "Hello", "tags": {"topic": "intro"}}
+    thread_resp = client.post(f"/v1/projects/{project['id']}/threads", json=thread_payload)
+    thread_resp.raise_for_status()
+    return thread_resp.json()
+
+
+@pytest.mark.integration
+def test_action_create_idempotent_match(client: TestClient):
+    thread = _create_project_and_thread(client)
+
+    action_payload = {
+        "type": "example",
+        "policy_mode": "DRAFT",
+        "payload": {"input": "value"},
+        "idempotency_key": "idem-action-1",
+    }
+    first = client.post(f"/v1/threads/{thread['id']}/actions", json=action_payload)
+    assert first.status_code == 201
+    action = first.json()
+
+    second = client.post(f"/v1/threads/{thread['id']}/actions", json=action_payload)
+    assert second.status_code == 200
+    assert second.json()["id"] == action["id"]
+
+
+@pytest.mark.integration
+def test_action_create_idempotent_conflict(client: TestClient):
+    thread = _create_project_and_thread(client)
+
+    action_payload = {
+        "type": "example",
+        "policy_mode": "DRAFT",
+        "payload": {"input": "value"},
+        "idempotency_key": "idem-action-2",
+    }
+    first = client.post(f"/v1/threads/{thread['id']}/actions", json=action_payload)
+    assert first.status_code == 201
+
+    action_payload["payload"] = {"input": "different"}
+    second = client.post(f"/v1/threads/{thread['id']}/actions", json=action_payload)
+    assert second.status_code == 409
+    assert second.json()["detail"] == "Idempotency key already used with different payload"
