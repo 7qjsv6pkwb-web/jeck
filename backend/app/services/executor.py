@@ -1,47 +1,56 @@
 from __future__ import annotations
 
-from typing import Any, Callable
+from typing import Callable
 
 from app.db.models import Action
+from app.services.executor_contract import ExecutorResult
 
-ExecutorHandler = Callable[[Action], dict[str, Any]]
+ExecutorHandler = Callable[[Action], ExecutorResult]
 
 # Registry of action handlers by action.type
-_HANDLERS: dict[str, ExecutorHandler] = {}
+HANDLERS: dict[str, ExecutorHandler] = {}
+
+
+def register_handler(action_type: str, handler: ExecutorHandler) -> None:
+    HANDLERS[action_type] = handler
 
 
 def register(action_type: str) -> Callable[[ExecutorHandler], ExecutorHandler]:
     """Register executor handler for a given action_type."""
 
     def _decorator(fn: ExecutorHandler) -> ExecutorHandler:
-        _HANDLERS[action_type] = fn
+        register_handler(action_type, fn)
         return fn
 
     return _decorator
 
 
 def list_handlers() -> list[str]:
-    return sorted(_HANDLERS.keys())
+    return sorted(HANDLERS.keys())
 
 
 @register("stub.echo")
-def _stub_echo(action: Action) -> dict[str, Any]:
-    return {
-        "action_id": str(action.id),
-        "type": action.type,
-        "echo": action.payload,
-    }
-
-
-def _default_stub(action: Action) -> dict[str, Any]:
+def _stub_echo(action: Action) -> ExecutorResult:
     return {
         "action_id": str(action.id),
         "type": action.type,
         "status": "executed",
-        "note": "no handler registered for action.type; default stub used",
+        "data": {"echo": action.payload},
     }
 
 
-def execute(action: Action) -> dict[str, Any]:
-    handler = _HANDLERS.get(action.type, _default_stub)
+def _default_stub(action: Action) -> ExecutorResult:
+    return {
+        "action_id": str(action.id),
+        "type": action.type,
+        "status": "executed",
+        "data": {
+            "note": "no handler registered for action.type; default stub used",
+            "echo": action.payload,
+        },
+    }
+
+
+def execute(action: Action) -> ExecutorResult:
+    handler = HANDLERS.get(action.type, _default_stub)
     return handler(action)

@@ -1,19 +1,19 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
-from typing import Any, Protocol
+from typing import Any, Protocol, TypedDict
 
 from app.db.models import Action
 
 
-@dataclass(frozen=True)
-class ExecutorResult:
-    ok: bool
+class ExecutorResult(TypedDict, total=False):
+    type: str
+    action_id: str
+    status: str
     data: dict[str, Any]
+    error: str
 
 
 class Executor(Protocol):
     def execute(self, action: Action) -> ExecutorResult:
         ...
-
 
