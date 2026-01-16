@@ -1,4 +1,5 @@
 import os
+from collections.abc import Generator
 
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session, sessionmaker
@@ -24,11 +25,13 @@ def get_engine():
 def get_sessionmaker():
     global _SessionLocal
     if _SessionLocal is None:
-        _SessionLocal = sessionmaker(bind=get_engine(), autoflush=False, autocommit=False)
+        _SessionLocal = sessionmaker(
+            bind=get_engine(), autoflush=False, autocommit=False
+        )
     return _SessionLocal
 
 
-def get_db_session() -> Session:
+def get_db_session() -> Generator[Session, None, None]:
     session_local = get_sessionmaker()
     db = session_local()
     try:

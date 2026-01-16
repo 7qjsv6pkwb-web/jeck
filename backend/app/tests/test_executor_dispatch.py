@@ -11,7 +11,7 @@ from app.services import executor as executor_service
 class _StubDB:
     def __init__(self, thread: Thread | None = None):
         self._thread = thread
-        self.added = []
+        self.added: list[object] = []
 
     def get(self, model, _id):
         if model is Thread:
@@ -31,7 +31,9 @@ class _StubDB:
         return None
 
 
-def _make_action(*, status: str, policy_mode: str, action_type: str = "stub.echo") -> Action:
+def _make_action(
+    *, status: str, policy_mode: str, action_type: str = "stub.echo"
+) -> Action:
     return Action(
         id=uuid.uuid4(),
         thread_id=uuid.uuid4(),
@@ -44,11 +46,17 @@ def _make_action(*, status: str, policy_mode: str, action_type: str = "stub.echo
 
 
 def test_executor_dispatches_registered_handler():
-    action = _make_action(status="APPROVED", policy_mode="EXECUTE", action_type="unit.test")
+    action = _make_action(
+        status="APPROVED", policy_mode="EXECUTE", action_type="unit.test"
+    )
     original = dict(executor_service.HANDLERS)
 
     def handler(_action: Action):
-        return {"action_id": str(_action.id), "type": _action.type, "status": "executed"}
+        return {
+            "action_id": str(_action.id),
+            "type": _action.type,
+            "status": "executed",
+        }
 
     executor_service.HANDLERS["unit.test"] = handler
     try:
@@ -61,7 +69,9 @@ def test_executor_dispatches_registered_handler():
 
 
 def test_executor_default_handler_returns_standard_result():
-    action = _make_action(status="APPROVED", policy_mode="EXECUTE", action_type="unit.unknown")
+    action = _make_action(
+        status="APPROVED", policy_mode="EXECUTE", action_type="unit.unknown"
+    )
     result = executor_service.execute(action)
 
     assert result["type"] == action.type
@@ -81,7 +91,9 @@ def test_execute_action_blocks_non_approved():
 
 def test_execute_action_persists_result_and_done():
     thread = Thread(id=uuid.uuid4(), project_id=uuid.uuid4(), title="T", tags={})
-    action = _make_action(status="APPROVED", policy_mode="EXECUTE", action_type="stub.echo")
+    action = _make_action(
+        status="APPROVED", policy_mode="EXECUTE", action_type="stub.echo"
+    )
     action.thread_id = thread.id
     db = _StubDB(thread)
 

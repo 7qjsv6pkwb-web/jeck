@@ -7,7 +7,6 @@ from app.db.models import Action, Thread
 from app.services import audit as audit_service
 from app.services import executor as executor_service
 
-
 ALLOWED_TRANSITIONS = {
     "DRAFT": {"APPROVED", "CANCELED"},
     "APPROVED": {"EXECUTING", "CANCELED"},
@@ -61,6 +60,7 @@ def approve_action(db: Session, *, action: Action, approved_by: str) -> Action:
     action.approved_by = approved_by
     return action
 
+
 def cancel_action(db: Session, *, action: Action, actor: str = "system") -> Action:
     _transition_action(db, action, "CANCELED", actor=actor)
     return action
@@ -91,7 +91,7 @@ def execute_action(db: Session, *, action: Action) -> Action:
     _transition_action(db, action, "EXECUTING", actor="system")
     try:
         result = executor_service.execute(action)
-        action.result = result
+        action.result = result  # type: ignore[assignment]
         _transition_action(db, action, "DONE", actor="system")
         audit_service.log_audit_event(
             db,
@@ -103,7 +103,7 @@ def execute_action(db: Session, *, action: Action) -> Action:
             action_id=action.id,
         )
     except Exception as exc:  # noqa: BLE001
-        action.result = {"error": str(exc)}
+        action.result = {"error": str(exc)}  # type: ignore[assignment]
         _transition_action(db, action, "FAILED", actor="system")
         audit_service.log_audit_event(
             db,
@@ -117,7 +117,9 @@ def execute_action(db: Session, *, action: Action) -> Action:
     return action
 
 
-def _transition_action(db: Session, action: Action, new_status: str, *, actor: str) -> None:
+def _transition_action(
+    db: Session, action: Action, new_status: str, *, actor: str
+) -> None:
     allowed = ALLOWED_TRANSITIONS.get(action.status, set())
     if new_status not in allowed:
         raise HTTPException(
