@@ -1,3 +1,4 @@
+import base64
 import os
 from pathlib import Path
 
@@ -24,12 +25,13 @@ def run_migrations(database_url: str) -> None:
 
 
 @pytest.mark.integration
-def test_artifacts_flow(monkeypatch):
+def test_artifacts_flow(monkeypatch, tmp_path):
     database_url = os.getenv("DATABASE_URL")
     if not database_url:
         pytest.skip("DATABASE_URL is required for integration tests")
 
     monkeypatch.setenv("DATABASE_URL", database_url)
+    monkeypatch.setenv("ARTIFACTS_DIR", str(tmp_path))
     run_migrations(database_url)
 
     engine = create_engine(database_url)
@@ -44,6 +46,11 @@ def test_artifacts_flow(monkeypatch):
 
     app.dependency_overrides[get_db_session] = override_db_session
     client = TestClient(app)
+
+    # Empty list when none
+    empty = client.get("/v1/artifacts")
+    assert empty.status_code == 200
+    assert empty.json() == []
 
     # Create project + thread + action
     pr = client.post("/v1/projects", json={"slug": "demo", "name": "Demo", "settings": {}})
@@ -69,15 +76,18 @@ def test_artifacts_flow(monkeypatch):
         "thread_id": thread["id"],
         "action_id": action["id"],
         "type": "text",
-        "storage_path": "artifacts/demo/hello.txt",
         "filename": "hello.txt",
         "metadata": {"mime": "text/plain"},
+        "content_base64": base64.b64encode(b"hello world").decode("ascii"),
     }
     cr = client.post("/v1/artifacts", json=payload)
     assert cr.status_code == 201
     artifact = cr.json()
     assert artifact["project_id"] == project["id"]
     assert artifact["filename"] == "hello.txt"
+    stored_path = tmp_path / artifact["storage_path"]
+    assert stored_path.exists()
+    assert stored_path.read_bytes() == b"hello world"
 
     # List with filters
     lst = client.get(f"/v1/artifacts?project_id={project['id']}&limit=10")
@@ -88,5 +98,9 @@ def test_artifacts_flow(monkeypatch):
     gt = client.get(f"/v1/artifacts/{artifact['id']}")
     assert gt.status_code == 200
     assert gt.json()["id"] == artifact["id"]
+
+    dl = client.get(f"/v1/artifacts/{artifact['id']}/download")
+    assert dl.status_code == 200
+    assert dl.content == b"hello world"
 
     app.dependency_overrides.clear()

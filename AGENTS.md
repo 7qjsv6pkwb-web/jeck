@@ -112,6 +112,7 @@ Each PR description must contain:
 
 ## Standard dev commands (source of truth)
 From repo root:
+- Preferred local checks: `make test` and `make test-int` (with `DATABASE_URL` set).
 - Start DB: `docker compose up -d db`
 - Backend (tests): `cd backend && poetry run pytest -q`
 - Backend (integration): `cd backend && poetry run pytest -q -m integration`
