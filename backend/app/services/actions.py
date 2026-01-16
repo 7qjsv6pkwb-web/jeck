@@ -61,59 +61,28 @@ def approve_action(db: Session, *, action: Action, approved_by: str) -> Action:
     action.approved_by = approved_by
     return action
 
+    _transition_action(db, action, "APPROVED", actor=approved_by)
+    action.approved_by = approved_by
+    return action
 def cancel_action(db: Session, *, action: Action, actor: str = "system") -> Action:
     _transition_action(db, action, "CANCELED", actor=actor)
     return action
 
 
 def execute_action(db: Session, *, action: Action) -> Action:
-    if action.status != "APPROVED":
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail="Action must be APPROVED before execution.",
-        )
     if action.policy_mode != "EXECUTE":
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
             detail="Action policy_mode must be EXECUTE to run.",
         )
-    thread = db.get(Thread, action.thread_id)
-    project_id = thread.project_id if thread else None
-    audit_service.log_audit_event(
-        db,
-        actor="system",
-        event_type="action.execute_attempt",
-        payload={"status": action.status},
-        project_id=project_id,
-        thread_id=action.thread_id,
-        action_id=action.id,
-    )
     _transition_action(db, action, "EXECUTING", actor="system")
     try:
         result = executor_service.execute(action)
         action.result = result
         _transition_action(db, action, "DONE", actor="system")
-        audit_service.log_audit_event(
-            db,
-            actor="system",
-            event_type="action.execute_succeeded",
-            payload={"status": action.status},
-            project_id=project_id,
-            thread_id=action.thread_id,
-            action_id=action.id,
-        )
     except Exception as exc:  # noqa: BLE001
         action.result = {"error": str(exc)}
         _transition_action(db, action, "FAILED", actor="system")
-        audit_service.log_audit_event(
-            db,
-            actor="system",
-            event_type="action.execute_failed",
-            payload={"status": action.status, "error": str(exc)},
-            project_id=project_id,
-            thread_id=action.thread_id,
-            action_id=action.id,
-        )
     return action
 
 
