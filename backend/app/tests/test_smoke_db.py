@@ -7,7 +7,7 @@ from alembic.config import Config
 from sqlalchemy import create_engine, select
 from sqlalchemy.orm import sessionmaker
 
-from app.db import models
+import app.db.models as db_models
 
 
 BASE_DIR = Path(__file__).resolve().parents[2]
@@ -34,16 +34,16 @@ def test_migrations_and_basic_crud(monkeypatch):
     SessionLocal = sessionmaker(bind=engine)
 
     with SessionLocal() as session:
-        project = models.Project(slug="demo", name="Demo", settings={"tier": "dev"})
-        thread = models.Thread(project=project, title="Hello", tags={"topic": "intro"})
-        message = models.Message(
+        project = db_models.Project(slug="demo", name="Demo", settings={"tier": "dev"})
+        thread = db_models.Thread(project=project, title="Hello", tags={"topic": "intro"})
+        message = db_models.Message(
             thread=thread,
             channel="web",
             role="user",
             content="Hello world",
             meta={"lang": "en"},
         )
-        action = models.Action(
+        action = db_models.Action(
             thread=thread,
             type="example",
             policy_mode="DRAFT",
@@ -55,16 +55,16 @@ def test_migrations_and_basic_crud(monkeypatch):
         session.commit()
 
         stored_project = session.execute(
-            select(models.Project).where(models.Project.slug == "demo")
+            select(db_models.Project).where(db_models.Project.slug == "demo")
         ).scalar_one()
         stored_thread = session.execute(
-            select(models.Thread).where(models.Thread.project_id == stored_project.id)
+            select(db_models.Thread).where(db_models.Thread.project_id == stored_project.id)
         ).scalar_one()
         stored_message = session.execute(
-            select(models.Message).where(models.Message.thread_id == stored_thread.id)
+            select(db_models.Message).where(db_models.Message.thread_id == stored_thread.id)
         ).scalar_one()
         stored_action = session.execute(
-            select(models.Action).where(models.Action.idempotency_key == "idem-1")
+            select(db_models.Action).where(db_models.Action.idempotency_key == "idem-1")
         ).scalar_one()
 
         assert stored_project.name == "Demo"
