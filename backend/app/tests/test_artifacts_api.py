@@ -85,6 +85,7 @@ def test_artifacts_flow(monkeypatch, tmp_path):
     artifact = cr.json()
     assert artifact["project_id"] == project["id"]
     assert artifact["filename"] == "hello.txt"
+    assert artifact["download_url"] == f"/v1/artifacts/{artifact['id']}/download"
     stored_path = tmp_path / artifact["storage_path"]
     assert stored_path.exists()
     assert stored_path.read_bytes() == b"hello world"
@@ -98,6 +99,7 @@ def test_artifacts_flow(monkeypatch, tmp_path):
     gt = client.get(f"/v1/artifacts/{artifact['id']}")
     assert gt.status_code == 200
     assert gt.json()["id"] == artifact["id"]
+    assert gt.json()["download_url"] == f"/v1/artifacts/{artifact['id']}/download"
 
     dl = client.get(f"/v1/artifacts/{artifact['id']}/download")
     assert dl.status_code == 200

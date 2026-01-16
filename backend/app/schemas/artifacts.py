@@ -28,3 +28,4 @@ class ArtifactResponse(BaseModel):
     metadata: dict
     version: int
     created_at: datetime
+    download_url: str

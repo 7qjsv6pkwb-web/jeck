@@ -32,6 +32,7 @@ def create_artifact(payload: ArtifactCreate, db: Session = Depends(get_db_sessio
             "metadata": artifact.metadata_,
             "version": artifact.version,
             "created_at": artifact.created_at,
+            "download_url": f"/v1/artifacts/{artifact.id}/download",
         }
     )
 
@@ -63,6 +64,7 @@ def list_artifacts(
                     "metadata": a.metadata_,
                     "version": a.version,
                     "created_at": a.created_at,
+                    "download_url": f"/v1/artifacts/{a.id}/download",
                 }
             )
         )
@@ -87,6 +89,7 @@ def get_artifact(artifact_id: UUID, db: Session = Depends(get_db_session)) -> Ar
             "metadata": a.metadata_,
             "version": a.version,
             "created_at": a.created_at,
+            "download_url": f"/v1/artifacts/{a.id}/download",
         }
     )
 
