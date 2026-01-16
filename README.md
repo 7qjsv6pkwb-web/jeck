@@ -16,14 +16,13 @@ MVP goal: FastAPI + PostgreSQL + SQLAlchemy 2.0 + Alembic + Pytest.
 - Python 3.11+ (recommended)
 - Poetry installed
 
-### Backend scaffold commands
+### Backend scaffold commands (preferred via Makefile)
 ```bash
-docker compose up -d db
-cd backend
-poetry install
-poetry run alembic upgrade head
-poetry run pytest -q
+make db-up
+cd backend && poetry install
+make test
 ```
+For integration tests, set `DATABASE_URL` then run `make test-int`.
 
 ### 2) Run API
 ```bash
@@ -48,5 +47,4 @@ poetry run uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 - A5 Artifact storage
 - A6 Executor contract + stub
 - A7 Tests
-
 
