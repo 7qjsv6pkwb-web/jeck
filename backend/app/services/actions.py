@@ -90,7 +90,7 @@ def execute_action(db: Session, *, action: Action) -> Action:
     )
     _transition_action(db, action, "EXECUTING", actor="system")
     try:
-        result = executor_service.execute(action)
+        result = executor_service.execute(db, action)
         action.result = result
         _transition_action(db, action, "DONE", actor="system")
         audit_service.log_audit_event(

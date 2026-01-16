@@ -1,21 +1,18 @@
 SHELL := /bin/bash
 
-.PHONY: test test-integration up down migrate api
+.PHONY: db-up test test-int api migrate
+
+db-up:
+	$(MAKE) -C .. db-up
 
 test:
-	poetry run pytest -q
+	$(MAKE) -C .. test
 
-test-integration:
-	poetry run pytest -q -m integration
-
-up:
-	docker compose up -d db
-
-down:
-	docker compose down
-
-migrate:
-	poetry run alembic upgrade head
+test-int:
+	$(MAKE) -C .. test-int
 
 api:
-	poetry run uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+	$(MAKE) -C .. api
+
+migrate:
+	$(MAKE) -C .. migrate
