@@ -1,4 +1,6 @@
+import base64
 import uuid
+from types import SimpleNamespace
 
 import pytest
 from fastapi import HTTPException
@@ -46,13 +48,14 @@ def _make_action(*, status: str, policy_mode: str, action_type: str = "stub.echo
 def test_executor_dispatches_registered_handler():
     action = _make_action(status="APPROVED", policy_mode="EXECUTE", action_type="unit.test")
     original = dict(executor_service.HANDLERS)
+    db = _StubDB()
 
-    def handler(_action: Action):
+    def handler(_db: _StubDB, _action: Action):
         return {"action_id": str(_action.id), "type": _action.type, "status": "executed"}
 
     executor_service.HANDLERS["unit.test"] = handler
     try:
-        result = executor_service.execute(action)
+        result = executor_service.execute(db, action)
     finally:
         executor_service.HANDLERS.clear()
         executor_service.HANDLERS.update(original)
@@ -62,11 +65,39 @@ def test_executor_dispatches_registered_handler():
 
 def test_executor_default_handler_returns_standard_result():
     action = _make_action(status="APPROVED", policy_mode="EXECUTE", action_type="unit.unknown")
-    result = executor_service.execute(action)
+    db = _StubDB()
+    result = executor_service.execute(db, action)
 
     assert result["type"] == action.type
     assert result["action_id"] == str(action.id)
     assert result["status"] == "executed"
+
+
+def test_executor_artifact_store_creates_artifact(monkeypatch):
+    thread = Thread(id=uuid.uuid4(), project_id=uuid.uuid4(), title="T", tags={})
+    action = _make_action(status="APPROVED", policy_mode="EXECUTE", action_type="artifact.store")
+    action.thread_id = thread.id
+    action.payload = {
+        "type": "report",
+        "filename": "hello.txt",
+        "content_base64": base64.b64encode(b"hello").decode(),
+    }
+    db = _StubDB(thread)
+    created = {}
+
+    def fake_create_artifact(_db, payload):
+        created["payload"] = payload
+        return SimpleNamespace(id=uuid.uuid4())
+
+    monkeypatch.setattr(executor_service.artifact_service, "create_artifact", fake_create_artifact)
+
+    result = executor_service.execute(db, action)
+
+    assert created["payload"].project_id == thread.project_id
+    assert created["payload"].thread_id == thread.id
+    assert created["payload"].action_id == action.id
+    assert result["status"] == "executed"
+    assert "artifact_id" in result["data"]
 
 
 def test_execute_action_blocks_non_approved():
