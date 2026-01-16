@@ -3,15 +3,14 @@ import os
 from pathlib import Path
 
 import pytest
-from alembic import command
 from alembic.config import Config
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
+from alembic import command
 from app.db.session import get_db_session
 from app.main import app
-
 
 BASE_DIR = Path(__file__).resolve().parents[2]
 
@@ -53,20 +52,27 @@ def test_artifacts_flow(monkeypatch, tmp_path):
     assert empty.json() == []
 
     # Create project + thread + action
-    pr = client.post("/v1/projects", json={"slug": "demo", "name": "Demo", "settings": {}})
+    pr = client.post(
+        "/v1/projects", json={"slug": "demo", "name": "Demo", "settings": {}}
+    )
     assert pr.status_code == 201
     project = pr.json()
 
-    tr = client.post(f"/v1/projects/{project['id']}/threads", json={"title": "T1", "tags": {}})
+    tr = client.post(
+        f"/v1/projects/{project['id']}/threads", json={"title": "T1", "tags": {}}
+    )
     assert tr.status_code == 201
     thread = tr.json()
 
-    ar = client.post(f"/v1/threads/{thread['id']}/actions", json={
-        "type": "example",
-        "policy_mode": "DRAFT",
-        "payload": {"x": 1},
-        "idempotency_key": "idem-art-1",
-    })
+    ar = client.post(
+        f"/v1/threads/{thread['id']}/actions",
+        json={
+            "type": "example",
+            "policy_mode": "DRAFT",
+            "payload": {"x": 1},
+            "idempotency_key": "idem-art-1",
+        },
+    )
     assert ar.status_code == 201
     action = ar.json()
 

@@ -29,8 +29,12 @@ def list_projects(db: Session = Depends(get_db_session)) -> list[ProjectResponse
 
 
 @router.get("/{project_id}", response_model=ProjectResponse)
-def get_project(project_id: UUID, db: Session = Depends(get_db_session)) -> ProjectResponse:
+def get_project(
+    project_id: UUID, db: Session = Depends(get_db_session)
+) -> ProjectResponse:
     project = db.get(Project, project_id)
     if not project:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Project not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Project not found"
+        )
     return ProjectResponse.model_validate(project)

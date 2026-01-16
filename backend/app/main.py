@@ -1,8 +1,7 @@
 from fastapi import FastAPI
 
-from app.core import env  # noqa: F401
-
 from app.api.router import api_router
+from app.core import env  # noqa: F401
 
 
 def create_app() -> FastAPI:

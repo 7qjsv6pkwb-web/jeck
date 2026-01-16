@@ -17,7 +17,9 @@ def create_thread(
 ) -> ThreadResponse:
     project = db.get(Project, project_id)
     if not project:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Project not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Project not found"
+        )
     thread = Thread(project_id=project_id, title=payload.title, tags=payload.tags)
     db.add(thread)
     db.commit()
@@ -31,9 +33,15 @@ def list_threads(
 ) -> list[ThreadResponse]:
     project = db.get(Project, project_id)
     if not project:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Project not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Project not found"
+        )
     threads = (
-        db.execute(select(Thread).where(Thread.project_id == project_id).order_by(Thread.created_at))
+        db.execute(
+            select(Thread)
+            .where(Thread.project_id == project_id)
+            .order_by(Thread.created_at)
+        )
         .scalars()
         .all()
     )

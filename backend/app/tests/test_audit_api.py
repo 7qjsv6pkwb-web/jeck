@@ -2,15 +2,14 @@ import os
 from pathlib import Path
 
 import pytest
-from alembic import command
 from alembic.config import Config
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
+from alembic import command
 from app.db.session import get_db_session
 from app.main import app
-
 
 BASE_DIR = Path(__file__).resolve().parents[2]
 
@@ -30,7 +29,9 @@ def _find_audit_get_path() -> str:
         path = getattr(r, "path", "")
         if "GET" in methods and "audit" in path:
             return path
-    raise AssertionError("No GET audit endpoint found in app routes (expected path contains 'audit').")
+    raise AssertionError(
+        "No GET audit endpoint found in app routes (expected path contains 'audit')."
+    )
 
 
 @pytest.mark.integration
@@ -56,11 +57,17 @@ def test_audit_api_returns_events_for_action(monkeypatch):
     client = TestClient(app)
 
     # 1) create project + thread
-    pr = client.post("/v1/projects", json={"slug": "demo", "name": "Demo", "settings": {"tier": "dev"}})
+    pr = client.post(
+        "/v1/projects",
+        json={"slug": "demo", "name": "Demo", "settings": {"tier": "dev"}},
+    )
     pr.raise_for_status()
     project = pr.json()
 
-    tr = client.post(f"/v1/projects/{project['id']}/threads", json={"title": "Hello", "tags": {"topic": "intro"}})
+    tr = client.post(
+        f"/v1/projects/{project['id']}/threads",
+        json={"title": "Hello", "tags": {"topic": "intro"}},
+    )
     tr.raise_for_status()
     thread = tr.json()
 

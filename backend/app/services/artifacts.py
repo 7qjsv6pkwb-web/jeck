@@ -30,7 +30,9 @@ def decode_content(content_base64: str) -> bytes:
         raise ValueError("Invalid content_base64 payload") from exc
 
 
-def write_artifact_bytes(storage_root: Path, relative_path: Path, content: bytes) -> None:
+def write_artifact_bytes(
+    storage_root: Path, relative_path: Path, content: bytes
+) -> None:
     target_path = storage_root / relative_path
     target_path.parent.mkdir(parents=True, exist_ok=True)
     target_path.write_bytes(content)
@@ -57,8 +59,12 @@ def create_artifact(db: Session, payload: ArtifactCreate) -> Artifact:
     db.add(artifact)
     db.flush()
 
-    relative_path = build_storage_path(payload.project_id, artifact.id, payload.filename)
-    write_artifact_bytes(get_storage_root(), relative_path, decode_content(payload.content_base64))
+    relative_path = build_storage_path(
+        payload.project_id, artifact.id, payload.filename
+    )
+    write_artifact_bytes(
+        get_storage_root(), relative_path, decode_content(payload.content_base64)
+    )
     artifact.storage_path = relative_path.as_posix()
 
     db.commit()

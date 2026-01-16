@@ -2,15 +2,14 @@ import os
 from pathlib import Path
 
 import pytest
-from alembic import command
 from alembic.config import Config
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
+from alembic import command
 from app.db.session import get_db_session
 from app.main import app
-
 
 BASE_DIR = Path(__file__).resolve().parents[2]
 
@@ -79,7 +78,7 @@ def test_crud_flow(monkeypatch):
         f"/v1/threads/{thread['id']}/messages", json=message_payload
     )
     assert message_response.status_code == 201
-    message = message_response.json()
+    message_response.json()
 
     list_messages = client.get(f"/v1/threads/{thread['id']}/messages")
     assert list_messages.status_code == 200

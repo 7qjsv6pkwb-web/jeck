@@ -2,13 +2,12 @@ import os
 from pathlib import Path
 
 import pytest
-from alembic import command
 from alembic.config import Config
 from sqlalchemy import create_engine, select
 from sqlalchemy.orm import sessionmaker
 
 import app.db.models as db_models
-
+from alembic import command
 
 BASE_DIR = Path(__file__).resolve().parents[2]
 
@@ -35,7 +34,9 @@ def test_migrations_and_basic_crud(monkeypatch):
 
     with SessionLocal() as session:
         project = db_models.Project(slug="demo", name="Demo", settings={"tier": "dev"})
-        thread = db_models.Thread(project=project, title="Hello", tags={"topic": "intro"})
+        thread = db_models.Thread(
+            project=project, title="Hello", tags={"topic": "intro"}
+        )
         message = db_models.Message(
             thread=thread,
             channel="web",
@@ -58,10 +59,14 @@ def test_migrations_and_basic_crud(monkeypatch):
             select(db_models.Project).where(db_models.Project.slug == "demo")
         ).scalar_one()
         stored_thread = session.execute(
-            select(db_models.Thread).where(db_models.Thread.project_id == stored_project.id)
+            select(db_models.Thread).where(
+                db_models.Thread.project_id == stored_project.id
+            )
         ).scalar_one()
         stored_message = session.execute(
-            select(db_models.Message).where(db_models.Message.thread_id == stored_thread.id)
+            select(db_models.Message).where(
+                db_models.Message.thread_id == stored_thread.id
+            )
         ).scalar_one()
         stored_action = session.execute(
             select(db_models.Action).where(db_models.Action.idempotency_key == "idem-1")

@@ -1,4 +1,4 @@
-.PHONY: db-up db-down migrate test test-int api
+.PHONY: db-up db-down migrate test test-int api lint format format-check typecheck check
 
 SHELL := /bin/bash
 
@@ -27,9 +27,22 @@ test-int:
 		echo "Poetry is required. Install it and re-run: https://python-poetry.org/docs/#installation" >&2; \
 		exit 1; \
 	fi
-	@cd backend && poetry run python -c 'exec("import os\nfrom sqlalchemy import create_engine, text\nfrom sqlalchemy.exc import SQLAlchemyError\n\nurl = os.getenv(\"DATABASE_URL\")\nif not url:\n    raise SystemExit(\"DATABASE_URL is not set\")\n\nengine = create_engine(url)\ntry:\n    with engine.connect() as conn:\n        conn.execute(text(\"SELECT 1\"))\nexcept SQLAlchemyError as exc:\n    raise SystemExit(f\"Database connection failed: {exc}\")\n")'
 	cd backend && poetry run alembic upgrade head
 	cd backend && poetry run pytest -q -m integration
+
+lint:
+	cd backend && poetry run ruff check .
+
+format:
+	cd backend && poetry run ruff format .
+
+format-check:
+	cd backend && poetry run ruff format --check .
+
+typecheck:
+	cd backend && poetry run mypy app
+
+check: test lint format-check typecheck
 
 api:
 	cd backend && poetry run uvicorn app.main:app --reload --host 0.0.0.0 --port 8000

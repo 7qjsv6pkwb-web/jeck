@@ -21,6 +21,6 @@ def test_no_cyrillic_filenames_in_backend_app():
             continue
         name = f.name
         # crude cyrillic detection
-        if any("\u0400" <= ch <= "\u04FF" for ch in name):
+        if any("\u0400" <= ch <= "\u04ff" for ch in name):
             bad.append(str(f.relative_to(app_dir)))
     assert not bad, f"Cyrillic filenames detected under backend/app: {bad}"

@@ -17,7 +17,9 @@ def create_message(
 ) -> MessageResponse:
     thread = db.get(Thread, thread_id)
     if not thread:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Thread not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Thread not found"
+        )
     message = Message(
         thread_id=thread_id,
         channel=payload.channel,
@@ -37,9 +39,15 @@ def list_messages(
 ) -> list[MessageResponse]:
     thread = db.get(Thread, thread_id)
     if not thread:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Thread not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Thread not found"
+        )
     messages = (
-        db.execute(select(Message).where(Message.thread_id == thread_id).order_by(Message.created_at))
+        db.execute(
+            select(Message)
+            .where(Message.thread_id == thread_id)
+            .order_by(Message.created_at)
+        )
         .scalars()
         .all()
     )

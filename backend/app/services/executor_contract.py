@@ -14,6 +14,4 @@ class ExecutorResult(TypedDict, total=False):
 
 
 class Executor(Protocol):
-    def execute(self, action: Action) -> ExecutorResult:
-        ...
-
+    def execute(self, action: Action) -> ExecutorResult: ...

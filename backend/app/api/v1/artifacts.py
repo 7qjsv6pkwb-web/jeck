@@ -12,7 +12,9 @@ router = APIRouter(prefix="/artifacts", tags=["artifacts"])
 
 
 @router.post("", response_model=ArtifactResponse, status_code=status.HTTP_201_CREATED)
-def create_artifact(payload: ArtifactCreate, db: Session = Depends(get_db_session)) -> ArtifactResponse:
+def create_artifact(
+    payload: ArtifactCreate, db: Session = Depends(get_db_session)
+) -> ArtifactResponse:
     try:
         artifact = artifact_service.create_artifact(db, payload)
     except LookupError as exc:
@@ -70,7 +72,9 @@ def list_artifacts(
 
 
 @router.get("/{artifact_id}", response_model=ArtifactResponse)
-def get_artifact(artifact_id: UUID, db: Session = Depends(get_db_session)) -> ArtifactResponse:
+def get_artifact(
+    artifact_id: UUID, db: Session = Depends(get_db_session)
+) -> ArtifactResponse:
     a = artifact_service.get_artifact(db, artifact_id)
     if not a:
         raise HTTPException(status_code=404, detail="Artifact not found")
@@ -92,7 +96,9 @@ def get_artifact(artifact_id: UUID, db: Session = Depends(get_db_session)) -> Ar
 
 
 @router.get("/{artifact_id}/download")
-def download_artifact(artifact_id: UUID, db: Session = Depends(get_db_session)) -> FileResponse:
+def download_artifact(
+    artifact_id: UUID, db: Session = Depends(get_db_session)
+) -> FileResponse:
     artifact = artifact_service.get_artifact(db, artifact_id)
     if not artifact:
         raise HTTPException(status_code=404, detail="Artifact not found")

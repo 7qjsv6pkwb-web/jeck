@@ -22,7 +22,9 @@ def create_action(
 ) -> ActionResponse:
     thread = db.get(Thread, thread_id)
     if not thread:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Thread not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Thread not found"
+        )
     action = actions_service.create_action(
         db,
         thread=thread,
@@ -42,9 +44,15 @@ def list_actions(
 ) -> list[ActionResponse]:
     thread = db.get(Thread, thread_id)
     if not thread:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Thread not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Thread not found"
+        )
     actions = (
-        db.execute(select(Action).where(Action.thread_id == thread_id).order_by(Action.created_at))
+        db.execute(
+            select(Action)
+            .where(Action.thread_id == thread_id)
+            .order_by(Action.created_at)
+        )
         .scalars()
         .all()
     )
@@ -52,10 +60,14 @@ def list_actions(
 
 
 @router.get("/actions/{action_id}", response_model=ActionResponse)
-def get_action(action_id: UUID, db: Session = Depends(get_db_session)) -> ActionResponse:
+def get_action(
+    action_id: UUID, db: Session = Depends(get_db_session)
+) -> ActionResponse:
     action = db.get(Action, action_id)
     if not action:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Action not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Action not found"
+        )
     return ActionResponse.model_validate(action)
 
 
@@ -67,7 +79,9 @@ def approve_action(
 ) -> ActionResponse:
     action = db.get(Action, action_id)
     if not action:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Action not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Action not found"
+        )
 
     # Web-only approve guardrail
     if payload.channel != "web":
@@ -76,16 +90,23 @@ def approve_action(
             detail="Approve can be performed only by a web user.",
         )
 
-    action = actions_service.approve_action(db, action=action, approved_by=payload.approved_by)
+    action = actions_service.approve_action(
+        db, action=action, approved_by=payload.approved_by
+    )
     db.commit()
     db.refresh(action)
     return ActionResponse.model_validate(action)
 
+
 @router.post("/actions/{action_id}/execute", response_model=ActionResponse)
-def execute_action(action_id: UUID, db: Session = Depends(get_db_session)) -> ActionResponse:
+def execute_action(
+    action_id: UUID, db: Session = Depends(get_db_session)
+) -> ActionResponse:
     action = db.get(Action, action_id)
     if not action:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Action not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Action not found"
+        )
     action = actions_service.execute_action(db, action=action)
     db.commit()
     db.refresh(action)
@@ -93,10 +114,14 @@ def execute_action(action_id: UUID, db: Session = Depends(get_db_session)) -> Ac
 
 
 @router.post("/actions/{action_id}/cancel", response_model=ActionResponse)
-def cancel_action(action_id: UUID, db: Session = Depends(get_db_session)) -> ActionResponse:
+def cancel_action(
+    action_id: UUID, db: Session = Depends(get_db_session)
+) -> ActionResponse:
     action = db.get(Action, action_id)
     if not action:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Action not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Action not found"
+        )
     action = actions_service.cancel_action(db, action=action)
     db.commit()
     db.refresh(action)

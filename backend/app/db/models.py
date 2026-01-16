@@ -13,41 +13,57 @@ from app.db.base import Base
 class Project(Base):
     __tablename__ = "projects"
 
-    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
+    )
     slug: Mapped[str] = mapped_column(String(255), unique=True, nullable=False)
     name: Mapped[str] = mapped_column(String(255), nullable=False)
     settings: Mapped[dict] = mapped_column(JSONB, default=dict, nullable=False)
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
     )
 
-    threads = relationship("Thread", back_populates="project", cascade="all, delete-orphan")
+    threads = relationship(
+        "Thread", back_populates="project", cascade="all, delete-orphan"
+    )
 
 
 class Thread(Base):
     __tablename__ = "threads"
 
-    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
+    )
     project_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), ForeignKey("projects.id"), nullable=False
     )
     title: Mapped[str] = mapped_column(String(255), nullable=False)
     tags: Mapped[dict] = mapped_column(JSONB, default=dict, nullable=False)
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
     )
 
     project = relationship("Project", back_populates="threads")
-    messages = relationship("Message", back_populates="thread", cascade="all, delete-orphan")
-    actions = relationship("Action", back_populates="thread", cascade="all, delete-orphan")
+    messages = relationship(
+        "Message", back_populates="thread", cascade="all, delete-orphan"
+    )
+    actions = relationship(
+        "Action", back_populates="thread", cascade="all, delete-orphan"
+    )
 
 
 class Message(Base):
     __tablename__ = "messages"
 
-    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
+    )
     thread_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), ForeignKey("threads.id"), nullable=False
     )
@@ -55,20 +71,26 @@ class Message(Base):
     role: Mapped[str] = mapped_column(String(32), nullable=False)
     content: Mapped[str] = mapped_column(Text, nullable=False)
     meta: Mapped[dict] = mapped_column(JSONB, default=dict, nullable=False)
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )
 
     thread = relationship("Thread", back_populates="messages")
 
     __table_args__ = (
         CheckConstraint("channel IN ('web', 'telegram')", name="ck_messages_channel"),
-        CheckConstraint("role IN ('user', 'assistant', 'system')", name="ck_messages_role"),
+        CheckConstraint(
+            "role IN ('user', 'assistant', 'system')", name="ck_messages_role"
+        ),
     )
 
 
 class Action(Base):
     __tablename__ = "actions"
 
-    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
+    )
     thread_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), ForeignKey("threads.id"), nullable=False
     )
@@ -78,9 +100,15 @@ class Action(Base):
     payload: Mapped[dict] = mapped_column(JSONB, default=dict, nullable=False)
     result: Mapped[Optional[dict]] = mapped_column(JSONB, nullable=True)
     approved_by: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
-    approved_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
-    idempotency_key: Mapped[str] = mapped_column(String(255), unique=True, nullable=False)
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    approved_at: Mapped[Optional[datetime]] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    idempotency_key: Mapped[str] = mapped_column(
+        String(255), unique=True, nullable=False
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
     )
@@ -101,7 +129,9 @@ class Action(Base):
 class Artifact(Base):
     __tablename__ = "artifacts"
 
-    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
+    )
     project_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), ForeignKey("projects.id"), nullable=False
     )
@@ -114,15 +144,21 @@ class Artifact(Base):
     type: Mapped[str] = mapped_column(String(255), nullable=False)
     storage_path: Mapped[str] = mapped_column(String(512), nullable=False)
     filename: Mapped[str] = mapped_column(String(255), nullable=False)
-    metadata_: Mapped[dict] = mapped_column("metadata", JSONB, default=dict, nullable=False)
+    metadata_: Mapped[dict] = mapped_column(
+        "metadata", JSONB, default=dict, nullable=False
+    )
     version: Mapped[int] = mapped_column(Integer, default=1, nullable=False)
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )
 
 
 class Audit(Base):
     __tablename__ = "audit"
 
-    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
+    )
     project_id: Mapped[Optional[uuid.UUID]] = mapped_column(
         UUID(as_uuid=True), ForeignKey("projects.id"), nullable=True
     )
@@ -135,4 +171,6 @@ class Audit(Base):
     actor: Mapped[str] = mapped_column(String(255), nullable=False)
     event_type: Mapped[str] = mapped_column(String(255), nullable=False)
     payload: Mapped[dict] = mapped_column(JSONB, default=dict, nullable=False)
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )

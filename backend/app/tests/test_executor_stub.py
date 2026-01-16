@@ -2,15 +2,14 @@ import os
 from pathlib import Path
 
 import pytest
-from alembic import command
 from alembic.config import Config
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
+from alembic import command
 from app.db.session import get_db_session
 from app.main import app
-
 
 BASE_DIR = Path(__file__).resolve().parents[2]
 
@@ -45,15 +44,27 @@ def test_execute_sets_result_and_done(monkeypatch):
     app.dependency_overrides[get_db_session] = override_db_session
     client = TestClient(app)
 
-    project = client.post("/v1/projects", json={"slug": "demo", "name": "Demo", "settings": {}}).json()
-    thread = client.post(f"/v1/projects/{project['id']}/threads", json={"title": "Hello", "tags": {}}).json()
+    project = client.post(
+        "/v1/projects", json={"slug": "demo", "name": "Demo", "settings": {}}
+    ).json()
+    thread = client.post(
+        f"/v1/projects/{project['id']}/threads", json={"title": "Hello", "tags": {}}
+    ).json()
 
     action = client.post(
         f"/v1/threads/{thread['id']}/actions",
-        json={"type": "stub", "policy_mode": "EXECUTE", "payload": {"x": 1}, "idempotency_key": "idem-exec-1"},
+        json={
+            "type": "stub",
+            "policy_mode": "EXECUTE",
+            "payload": {"x": 1},
+            "idempotency_key": "idem-exec-1",
+        },
     ).json()
 
-    client.post(f"/v1/actions/{action['id']}/approve", json={"approved_by": "tester", "channel": "web"}).raise_for_status()
+    client.post(
+        f"/v1/actions/{action['id']}/approve",
+        json={"approved_by": "tester", "channel": "web"},
+    ).raise_for_status()
 
     executed = client.post(f"/v1/actions/{action['id']}/execute")
     executed.raise_for_status()

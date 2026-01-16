@@ -1,0 +1,6 @@
+target-version = "py311"
+extend-exclude = ["alembic", "alembic/versions"]
+
+[lint]
+select = ["F", "E", "W", "I"]
+ignore = ["E501"]
