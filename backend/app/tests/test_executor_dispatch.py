@@ -45,14 +45,16 @@ def _make_action(*, status: str, policy_mode: str, action_type: str = "stub.echo
 
 def test_executor_dispatches_registered_handler():
     action = _make_action(status="APPROVED", policy_mode="EXECUTE", action_type="unit.test")
+    db = _StubDB()
     original = dict(executor_service.HANDLERS)
 
-    def handler(_action: Action):
+    def handler(_db, _action: Action):
+        assert _db is db
         return {"action_id": str(_action.id), "type": _action.type, "status": "executed"}
 
     executor_service.HANDLERS["unit.test"] = handler
     try:
-        result = executor_service.execute(action)
+        result = executor_service.execute(db, action)
     finally:
         executor_service.HANDLERS.clear()
         executor_service.HANDLERS.update(original)
@@ -62,11 +64,47 @@ def test_executor_dispatches_registered_handler():
 
 def test_executor_default_handler_returns_standard_result():
     action = _make_action(status="APPROVED", policy_mode="EXECUTE", action_type="unit.unknown")
-    result = executor_service.execute(action)
+    result = executor_service.execute(_StubDB(), action)
 
     assert result["type"] == action.type
     assert result["action_id"] == str(action.id)
     assert result["status"] == "executed"
+
+
+def test_artifact_store_handler_builds_payload(monkeypatch):
+    project_id = uuid.uuid4()
+    thread = Thread(id=uuid.uuid4(), project_id=project_id, title="T", tags={})
+    action = _make_action(status="APPROVED", policy_mode="EXECUTE", action_type="artifact.store")
+    action.thread_id = thread.id
+    action.payload = {
+        "type": "text/plain",
+        "filename": "note.txt",
+        "content_base64": "aGVsbG8=",
+        "metadata": {"source": "unit"},
+    }
+    db = _StubDB(thread)
+    captured: dict[str, object] = {}
+
+    def fake_create_artifact(_db, payload):
+        captured["payload"] = payload
+
+        class _Artifact:
+            id = uuid.uuid4()
+
+        return _Artifact()
+
+    monkeypatch.setattr("app.services.artifacts.create_artifact", fake_create_artifact)
+
+    result = executor_service.execute(db, action)
+    assert "payload" in captured
+    payload = captured["payload"]
+    assert payload.project_id == project_id
+    assert payload.thread_id == action.thread_id
+    assert payload.action_id == action.id
+    assert payload.type == "text/plain"
+    assert payload.filename == "note.txt"
+    assert payload.metadata == {"source": "unit"}
+    assert result["data"]["artifact_id"]
 
 
 def test_execute_action_blocks_non_approved():
