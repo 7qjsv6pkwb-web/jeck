@@ -28,10 +28,16 @@ test-int:
 		exit 1; \
 	fi
 	@cd backend && poetry run python - <<'PY'
+import os
+
 from sqlalchemy import create_engine, text
 from sqlalchemy.exc import SQLAlchemyError
 
-engine = create_engine("${DATABASE_URL}")
+url = os.getenv("DATABASE_URL")
+if not url:
+    raise SystemExit("DATABASE_URL is not set")
+
+engine = create_engine(url)
 try:
     with engine.connect() as conn:
         conn.execute(text("SELECT 1"))
