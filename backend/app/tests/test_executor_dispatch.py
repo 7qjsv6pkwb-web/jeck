@@ -45,19 +45,28 @@ def _make_action(*, status: str, policy_mode: str, action_type: str = "stub.echo
 
 def test_executor_dispatches_registered_handler():
     action = _make_action(status="APPROVED", policy_mode="EXECUTE", action_type="unit.test")
-    original = dict(executor_service._HANDLERS)
+    original = dict(executor_service.HANDLERS)
 
     def handler(_action: Action):
-        return {"ok": True}
+        return {"action_id": str(_action.id), "type": _action.type, "status": "executed"}
 
-    executor_service._HANDLERS["unit.test"] = handler
+    executor_service.HANDLERS["unit.test"] = handler
     try:
         result = executor_service.execute(action)
     finally:
-        executor_service._HANDLERS.clear()
-        executor_service._HANDLERS.update(original)
+        executor_service.HANDLERS.clear()
+        executor_service.HANDLERS.update(original)
 
-    assert result == {"ok": True}
+    assert result["status"] == "executed"
+
+
+def test_executor_default_handler_returns_standard_result():
+    action = _make_action(status="APPROVED", policy_mode="EXECUTE", action_type="unit.unknown")
+    result = executor_service.execute(action)
+
+    assert result["type"] == action.type
+    assert result["action_id"] == str(action.id)
+    assert result["status"] == "executed"
 
 
 def test_execute_action_blocks_non_approved():
